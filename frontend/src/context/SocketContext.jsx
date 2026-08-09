@@ -10,7 +10,7 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     // Connect socket
-    const socketUrl = window.location.origin;
+    const socketUrl = import.meta.env.VITE_BACKEND_URL || 'https://quize-mona.onrender.com';
     const newSocket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       autoConnect: true,

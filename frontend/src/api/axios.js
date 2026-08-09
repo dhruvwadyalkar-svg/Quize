@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://quize-mona.onrender.com';
+
 const API = axios.create({
-  baseURL: '/api',
+  baseURL: `${BACKEND_URL.replace(/\/$/, '')}/api`,
 });
 
 API.interceptors.request.use((config) => {
