@@ -1,0 +1,23 @@
+{
+  "name": "quiz-app-backend",
+  "version": "1.0.0",
+  "description": "Live Quiz Application Backend",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "json2csv": "^5.0.7",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^7.5.0",
+    "mongodb-memory-server": "^9.2.0",
+    "mongoose": "^8.3.1",
+    "socket.io": "^4.7.5"
+  }
+}

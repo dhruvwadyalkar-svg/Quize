@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Apple UI System Font Stack & Design System Tokens */
+:root {
+  --font-apple: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --transition-speed: 0.4s;
+}
+
+/* 4 Theme Color Definitions */
+[data-theme="midnight"] {
+  --bg-app: #000000;
+  --bg-card: rgba(22, 22, 29, 0.75);
+  --bg-card-hover: rgba(32, 32, 42, 0.85);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --text-main: #f5f5f7;
+  --text-muted: #98989d;
+  --accent-primary: #0071e3;
+  --accent-gradient: linear-gradient(135deg, #0071e3 0%, #5e5ce6 100%);
+  --glow-color: rgba(0, 113, 227, 0.35);
+}
+
+[data-theme="titanium"] {
+  --bg-app: #f5f5f7;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-card-hover: rgba(245, 245, 250, 0.95);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --text-main: #1d1d1f;
+  --text-muted: #86868b;
+  --accent-primary: #0071e3;
+  --accent-gradient: linear-gradient(135deg, #0071e3 0%, #34c759 100%);
+  --glow-color: rgba(0, 113, 227, 0.2);
+}
+
+[data-theme="cyberpunk"] {
+  --bg-app: #090514;
+  --bg-card: rgba(24, 15, 42, 0.8);
+  --bg-card-hover: rgba(35, 22, 60, 0.9);
+  --border-color: rgba(168, 85, 247, 0.25);
+  --text-main: #faf5ff;
+  --text-muted: #c084fc;
+  --accent-primary: #a855f7;
+  --accent-gradient: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  --glow-color: rgba(168, 85, 247, 0.4);
+}
+
+[data-theme="emerald"] {
+  --bg-app: #02100b;
+  --bg-card: rgba(8, 32, 24, 0.8);
+  --bg-card-hover: rgba(12, 45, 34, 0.9);
+  --border-color: rgba(16, 185, 129, 0.25);
+  --text-main: #ecfdf5;
+  --text-muted: #6ee7b7;
+  --accent-primary: #10b981;
+  --accent-gradient: linear-gradient(135deg, #10b981 0%, #f59e0b 100%);
+  --glow-color: rgba(16, 185, 129, 0.35);
+}
+
+body {
+  font-family: var(--font-apple);
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
+}
+
+/* Glassmorphism Frosted Panels */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  transition: background var(--transition-speed) ease, border-color var(--transition-speed) ease, box-shadow 0.3s ease;
+}
+
+.glass-panel-hover:hover {
+  background: var(--bg-card-hover);
+  box-shadow: 0 15px 35px -10px var(--glow-color);
+}
+
+.gradient-text {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-button {
+  background: var(--accent-gradient);
+  transition: all 0.3s ease;
+}
+.gradient-button:hover {
+  opacity: 0.95;
+  box-shadow: 0 8px 25px -5px var(--glow-color);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 150, 0.3);
+  border-radius: 4px;
+}
