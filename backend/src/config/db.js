@@ -23,18 +23,24 @@ export const connectDB = async () => {
     try {
       mongoose.set('strictQuery', false);
       console.log(`📡 Connecting to Cloud Database (MongoDB Atlas)...`);
-      try {
-        dns.setServers(['8.8.8.8', '1.1.1.1']);
-      } catch (e) {
-        // Ignore DNS set error if custom servers not allowed
+      if (process.platform === 'win32') {
+        try {
+          dns.setServers(['8.8.8.8', '1.1.1.1']);
+        } catch (e) {
+          // Ignore DNS set error on local Windows
+        }
       }
       await mongoose.connect(mongoURI.trim(), {
-        serverSelectionTimeoutMS: 8000,
+        serverSelectionTimeoutMS: 15000,
       });
       console.log('✅ MongoDB connected! Connected to Cloud Database successfully.');
       return;
     } catch (err) {
       console.error('❌ Cloud Database Connection Failed:', err.message);
+      if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+        console.error('❌ Production database connection failed. Please ensure MONGODB_URI is set correctly in Render environment variables and 0.0.0.0/0 is added to MongoDB Atlas Network Access.');
+        process.exit(1);
+      }
     }
   }
 
