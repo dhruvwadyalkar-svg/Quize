@@ -71,3 +71,10 @@ npm run dev
 5. Click **Join Quiz**, enter the join code, and enter the waiting room. Notice the student appears immediately on the Admin's Live Monitor!
 6. Click **START LIVE QUIZ NOW** on the Admin screen. Both screens sync in real time and the countdown clock starts ticking!
 7. Complete the quiz as a student, submit, and watch the live leaderboard update on both Admin and Student screens!
+
+---
+
+## 🌐 Production Deployment
+
+- **Backend Service**: Deployed on Render (`https://quize-mona.onrender.com`)
+- **Frontend Client**: Prepared for Vercel / Render Static Deployment with SPA rewrite configuration (`vercel.json`)
