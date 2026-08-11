@@ -10,6 +10,20 @@ const generateJoinCode = () => {
   return code;
 };
 
+const sanitizeQuizForStudent = (quiz) => {
+  const sanitizedQuiz = quiz.toObject();
+  sanitizedQuiz.questions = sanitizedQuiz.questions.map((q) => {
+    const { correctOptions, ...safeQuestion } = q;
+    return safeQuestion;
+  });
+  return sanitizedQuiz;
+};
+
+const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+
+// Excel otherwise converts numeric PRNs to scientific notation or strips leading zeroes.
+const csvPlainTextCell = (value) => csvCell(`="${String(value ?? '').replace(/"/g, '""')}"`);
+
 export const createQuiz = async (req, res) => {
   try {
     const { title, description, durationMinutes, perQuestionTimeSec, questions } = req.body;
@@ -72,18 +86,7 @@ export const getQuizById = async (req, res) => {
     }
 
     if (req.user && req.user.role === 'student') {
-      const attempt = await QuizAttempt.findOne({ quizId: quiz._id, studentId: req.user._id });
-      const isSubmitted = attempt && attempt.status !== 'in-progress';
-      const isEnded = quiz.status === 'ended';
-
-      if (!isSubmitted && !isEnded) {
-        const sanitizedQuiz = quiz.toObject();
-        sanitizedQuiz.questions = sanitizedQuiz.questions.map((q) => {
-          const { correctOptions, ...safeQ } = q;
-          return safeQ;
-        });
-        return res.json(sanitizedQuiz);
-      }
+      if (!quiz.resultsReleased) return res.json(sanitizeQuizForStudent(quiz));
     }
 
     res.json(quiz);
@@ -102,18 +105,7 @@ export const getQuizByJoinCode = async (req, res) => {
     }
 
     if (req.user && req.user.role === 'student') {
-      const attempt = await QuizAttempt.findOne({ quizId: quiz._id, studentId: req.user._id });
-      const isSubmitted = attempt && attempt.status !== 'in-progress';
-      const isEnded = quiz.status === 'ended';
-
-      if (!isSubmitted && !isEnded) {
-        const sanitizedQuiz = quiz.toObject();
-        sanitizedQuiz.questions = sanitizedQuiz.questions.map((q) => {
-          const { correctOptions, ...safeQ } = q;
-          return safeQ;
-        });
-        return res.json(sanitizedQuiz);
-      }
+      if (!quiz.resultsReleased) return res.json(sanitizeQuizForStudent(quiz));
     }
 
     res.json(quiz);
@@ -187,6 +179,26 @@ export const updateQuizStatus = async (req, res) => {
   }
 };
 
+const releaseQuizData = async (req, res, field, label) => {
+  try {
+    const quiz = await Quiz.findOne({ _id: req.params.id, createdBy: req.user._id });
+    if (!quiz) return res.status(404).json({ message: 'Quiz not found or unauthorized.' });
+    if (quiz.status !== 'ended') {
+      return res.status(400).json({ message: `End the quiz before releasing the ${label}.` });
+    }
+
+    quiz[field] = true;
+    await quiz.save();
+    res.json(quiz);
+  } catch (error) {
+    console.error(`Release ${label} error:`, error);
+    res.status(500).json({ message: `Error releasing ${label}.` });
+  }
+};
+
+export const releaseQuizResults = (req, res) => releaseQuizData(req, res, 'resultsReleased', 'results');
+export const releaseQuizLeaderboard = (req, res) => releaseQuizData(req, res, 'leaderboardReleased', 'leaderboard');
+
 // Zero-dependency native CSV Exporter Engine
 export const exportQuizResultsCSV = async (req, res) => {
   try {
@@ -203,13 +215,14 @@ export const exportQuizResultsCSV = async (req, res) => {
       return a.totalTimeTakenSec - b.totalTimeTakenSec;
     });
 
-    const headers = ['Rank', 'Student Name', 'Email', 'Score', 'Total Possible', 'Percentage', 'Time Taken (Seconds)', 'Status', 'Submitted At'];
+    const headers = ['Rank', 'Name', 'PRN', 'Email', 'Score', 'Total Possible', 'Percentage', 'Time Taken (Seconds)', 'Status', 'Submitted At'];
     const rows = [headers.join(',')];
 
     attempts.forEach((att, idx) => {
       const rank = idx + 1;
-      const name = (att.studentName || att.studentId?.name || 'Student').replace(/"/g, '""');
-      const email = (att.studentId?.email || 'N/A').replace(/"/g, '""');
+      const name = att.studentName || att.studentId?.name || 'Student';
+      const prn = att.studentPrn || 'N/A';
+      const email = att.studentId?.email || 'N/A';
       const score = att.score || 0;
       const totalPossible = att.totalPossibleMarks || quiz.totalMarks || 0;
       const percentage = `${(att.percentage || 0).toFixed(1)}%`;
@@ -219,14 +232,15 @@ export const exportQuizResultsCSV = async (req, res) => {
 
       rows.push([
         rank,
-        `"${name}"`,
-        `"${email}"`,
+        csvCell(name),
+        csvPlainTextCell(prn),
+        csvCell(email),
         score,
         totalPossible,
-        `"${percentage}"`,
+        csvCell(percentage),
         timeTaken,
         status,
-        `"${submittedAt}"`
+        csvCell(submittedAt)
       ].join(','));
     });
 

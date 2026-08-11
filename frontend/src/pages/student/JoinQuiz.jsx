@@ -3,20 +3,21 @@ import { useNavigate, useParams } from 'react-router-dom';
 import API from '../../api/axios';
 import { AnimatedPage } from '../../components/AnimatedPage';
 import { motion } from 'framer-motion';
-import { KeyRound, ArrowRight, Zap, AlertCircle } from 'lucide-react';
+import { KeyRound, ArrowRight, UserRound, Hash, AlertCircle } from 'lucide-react';
 
 export const JoinQuiz = () => {
   const { code: urlCode } = useParams();
   const navigate = useNavigate();
 
   const [joinCode, setJoinCode] = useState('');
+  const [studentName, setStudentName] = useState('');
+  const [studentPrn, setStudentPrn] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (urlCode) {
       setJoinCode(urlCode.toUpperCase());
-      handleJoinWithCode(urlCode.toUpperCase());
     }
   }, [urlCode]);
 
@@ -26,6 +27,10 @@ export const JoinQuiz = () => {
       setError('Please enter a 6-character quiz join code.');
       return;
     }
+    if (!studentName.trim() || !studentPrn.trim()) {
+      setError('Please enter your full name and PRN.');
+      return;
+    }
 
     setError('');
     setLoading(true);
@@ -33,6 +38,10 @@ export const JoinQuiz = () => {
     try {
       const response = await API.get(`/quizzes/code/${code}`);
       const quiz = response.data;
+      sessionStorage.setItem(`quiz_student_details_${quiz._id}`, JSON.stringify({
+        name: studentName.trim(),
+        prn: studentPrn.trim(),
+      }));
 
       // Check if student already submitted this quiz
       try {
@@ -96,6 +105,7 @@ export const JoinQuiz = () => {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
+            <label className="block text-left text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Quiz ID</label>
             <input
               type="text"
               maxLength={6}
@@ -107,11 +117,43 @@ export const JoinQuiz = () => {
             />
           </div>
 
+          <div>
+            <label className="block text-left text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Full Name</label>
+            <div className="relative">
+              <UserRound className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                required
+                maxLength={100}
+                value={studentName}
+                onChange={(e) => setStudentName(e.target.value)}
+                placeholder="Enter your full name"
+                className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-11 pr-4 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-left text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">PRN</label>
+            <div className="relative">
+              <Hash className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                required
+                maxLength={50}
+                value={studentPrn}
+                onChange={(e) => setStudentPrn(e.target.value)}
+                placeholder="Enter your PRN"
+                className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-11 pr-4 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             type="submit"
-            disabled={loading || !joinCode.trim()}
+            disabled={loading || !joinCode.trim() || !studentName.trim() || !studentPrn.trim()}
             className="w-full py-4 rounded-2xl gradient-button font-extrabold text-base text-white shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
           >
             {loading ? (

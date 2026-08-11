@@ -66,6 +66,14 @@ const quizSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  resultsReleased: {
+    type: Boolean,
+    default: false,
+  },
+  leaderboardReleased: {
+    type: Boolean,
+    default: false,
+  },
   questions: [questionSchema],
   totalMarks: {
     type: Number,

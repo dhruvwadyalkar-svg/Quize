@@ -7,6 +7,8 @@ import {
   updateQuiz,
   deleteQuiz,
   updateQuizStatus,
+  releaseQuizResults,
+  releaseQuizLeaderboard,
   exportQuizResultsCSV,
 } from '../controllers/quizController.js';
 import { verifyToken, requireRole } from '../middleware/authMiddleware.js';
@@ -25,6 +27,8 @@ router.get('/admin/my', requireRole('admin'), getAdminQuizzes);
 router.put('/:id', requireRole('admin'), updateQuiz);
 router.delete('/:id', requireRole('admin'), deleteQuiz);
 router.patch('/:id/status', requireRole('admin'), updateQuizStatus);
+router.patch('/:id/release-results', requireRole('admin'), releaseQuizResults);
+router.patch('/:id/release-leaderboard', requireRole('admin'), releaseQuizLeaderboard);
 router.get('/:id/export', requireRole('admin'), exportQuizResultsCSV);
 
 export default router;

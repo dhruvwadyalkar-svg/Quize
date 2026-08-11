@@ -25,33 +25,29 @@ export const StudentResult = () => {
 
   const fetchResultAndLeaderboard = async () => {
     try {
-      const [quizRes, attemptRes, leaderboardRes] = await Promise.all([
-        API.get(`/quizzes/${quizId}`),
-        API.get(`/attempts/my/${quizId}`),
-        API.get(`/attempts/quiz/${quizId}`),
-      ]);
-
+      const quizRes = await API.get(`/quizzes/${quizId}`);
       setQuiz(quizRes.data);
-      setAttempt(attemptRes.data);
 
-      const formattedLb = leaderboardRes.data.map((a, i) => ({
-        rank: i + 1,
-        studentId: a.studentId?._id || a.studentId,
-        studentName: a.studentName || 'Student',
-        score: a.score,
-        totalPossible: a.totalPossibleMarks,
-        percentage: a.percentage,
-        timeTakenSec: a.totalTimeTakenSec,
-        submittedAt: a.submittedAt,
-      }));
-      setLeaderboard(formattedLb);
+      if (quizRes.data.resultsReleased) {
+        const attemptRes = await API.get(`/attempts/my/${quizId}`);
+        setAttempt(attemptRes.data);
+        if (attemptRes.data?.percentage >= 45) {
+          confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 } });
+        }
+      }
 
-      if (attemptRes.data?.percentage >= 45) {
-        confetti({
-          particleCount: 140,
-          spread: 90,
-          origin: { y: 0.6 },
-        });
+      if (quizRes.data.leaderboardReleased) {
+        const leaderboardRes = await API.get(`/attempts/quiz/${quizId}`);
+        setLeaderboard(leaderboardRes.data.map((a, i) => ({
+          rank: i + 1,
+          studentId: a.studentId?._id || a.studentId,
+          studentName: a.studentName || 'Student',
+          score: a.score,
+          totalPossible: a.totalPossibleMarks,
+          percentage: a.percentage,
+          timeTakenSec: a.totalTimeTakenSec,
+          submittedAt: a.submittedAt,
+        })));
       }
     } catch (error) {
       console.error('Error loading student result:', error);
@@ -65,21 +61,16 @@ export const StudentResult = () => {
 
     joinQuizRoom(quizId);
 
-    socket.on('student_submitted_update', ({ leaderboard: updatedLb }) => {
-      if (updatedLb) setLeaderboard(updatedLb);
-    });
-
-    socket.on('quiz_ended', ({ leaderboard: finalLb }) => {
-      if (finalLb) setLeaderboard(finalLb);
-    });
+    socket.on('results_released', fetchResultAndLeaderboard);
+    socket.on('leaderboard_released', fetchResultAndLeaderboard);
 
     return () => {
-      socket.off('student_submitted_update');
-      socket.off('quiz_ended');
+      socket.off('results_released');
+      socket.off('leaderboard_released');
     };
   }, [socket, quizId]);
 
-  if (loading || !attempt || !quiz) {
+  if (loading || !quiz) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center">
         <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -87,6 +78,32 @@ export const StudentResult = () => {
       </div>
     );
   }
+
+  if (!quiz.resultsReleased) {
+    return (
+      <AnimatedPage>
+        <div className="max-w-5xl mx-auto min-h-[70vh] flex flex-col items-center justify-center px-4 py-8 gap-6 w-full">
+          <div className="max-w-lg w-full glass-panel p-8 sm:p-12 rounded-3xl border border-white/10 text-center space-y-5 shadow-2xl">
+            <div className="w-20 h-20 rounded-3xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto">
+              <Sparkles className="w-10 h-10 animate-pulse" />
+            </div>
+            <h1 className="text-3xl font-extrabold text-white font-outfit">Quiz Submitted</h1>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Your answers have been submitted. Please wait for the quiz admin to release the results.
+            </p>
+            <p className="text-xs text-indigo-300 font-bold">This page will update automatically.</p>
+          </div>
+          {quiz.leaderboardReleased && (
+            <div className="w-full">
+              <LeaderboardTable leaderboard={leaderboard} currentUserId={user?.id} />
+            </div>
+          )}
+        </div>
+      </AnimatedPage>
+    );
+  }
+
+  if (!attempt) return null;
 
   const percentage = attempt.percentage || 0;
   const isPassed = percentage >= 50;
@@ -241,10 +258,16 @@ export const StudentResult = () => {
           </div>
         </div>
 
-        {/* Live Leaderboard Display */}
-        <div className="space-y-4">
-          <LeaderboardTable leaderboard={leaderboard} currentUserId={user?.id} />
-        </div>
+        {quiz.leaderboardReleased ? (
+          <div className="space-y-4">
+            <LeaderboardTable leaderboard={leaderboard} currentUserId={user?.id} />
+          </div>
+        ) : (
+          <div className="glass-panel p-6 rounded-3xl border border-white/10 text-center space-y-2">
+            <h2 className="text-lg font-extrabold text-white">Leaderboard Pending</h2>
+            <p className="text-sm text-slate-400">The admin has not released the leaderboard yet.</p>
+          </div>
+        )}
       </div>
     </AnimatedPage>
   );

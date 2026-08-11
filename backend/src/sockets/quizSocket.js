@@ -87,20 +87,11 @@ export const setupQuizSockets = (io) => {
       const attempts = await QuizAttempt.find({ quizId }).sort({ score: -1, totalTimeTakenSec: 1 });
       const submittedCount = attempts.filter(a => a.status !== 'in-progress').length;
 
-      // Broadcast live submission alert to Admin and updated leaderboard to room
+      // Do not send scores over the student-visible socket before the admin releases the leaderboard.
       io.to(roomName).emit('student_submitted_update', {
         studentId,
         studentName,
         submittedCount,
-        leaderboard: attempts.map((a, i) => ({
-          rank: i + 1,
-          studentName: a.studentName,
-          score: a.score,
-          totalPossible: a.totalPossibleMarks,
-          percentage: a.percentage,
-          timeTakenSec: a.totalTimeTakenSec,
-          submittedAt: a.submittedAt,
-        })),
       });
     });
 
@@ -119,22 +110,21 @@ export const setupQuizSockets = (io) => {
         await quiz.save();
 
         const roomName = `quiz_${quizId}`;
-        const attempts = await QuizAttempt.find({ quizId }).sort({ score: -1, totalTimeTakenSec: 1 });
-
         io.to(roomName).emit('quiz_ended', {
           quizId,
-          leaderboard: attempts.map((a, i) => ({
-            rank: i + 1,
-            studentName: a.studentName,
-            score: a.score,
-            totalPossible: a.totalPossibleMarks,
-            percentage: a.percentage,
-            timeTakenSec: a.totalTimeTakenSec,
-          })),
         });
       } catch (error) {
         console.error('Socket end quiz error:', error);
       }
+    });
+
+    // These are notification-only events. API routes above perform the actual admin-authorized release.
+    socket.on('results_released', ({ quizId }) => {
+      if (quizId) io.to(`quiz_${quizId}`).emit('results_released');
+    });
+
+    socket.on('leaderboard_released', ({ quizId }) => {
+      if (quizId) io.to(`quiz_${quizId}`).emit('leaderboard_released');
     });
 
     // Disconnect cleanup

@@ -8,6 +8,7 @@ import { connectDB } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import quizRoutes from './routes/quizRoutes.js';
 import attemptRoutes from './routes/attemptRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 import { setupQuizSockets } from './sockets/quizSocket.js';
 
 dotenv.config();
@@ -31,6 +32,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/attempts', attemptRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Live Quiz API is running smoothly.' });

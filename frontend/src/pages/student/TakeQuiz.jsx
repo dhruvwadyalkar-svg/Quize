@@ -38,8 +38,18 @@ export const TakeQuiz = () => {
       const st = response.data.startTime ? new Date(response.data.startTime).getTime() : Date.now();
       setServerStartTime(st);
 
-      // Register attempt
-      await API.post('/attempts/start', { quizId });
+      const studentDetails = JSON.parse(sessionStorage.getItem(`quiz_student_details_${quizId}`) || 'null');
+      if (!studentDetails?.name || !studentDetails?.prn) {
+        navigate('/join', { replace: true });
+        return;
+      }
+
+      // Register the attempt using the identity entered on the join screen.
+      await API.post('/attempts/start', {
+        quizId,
+        studentName: studentDetails.name,
+        studentPrn: studentDetails.prn,
+      });
     } catch (error) {
       console.error('Error starting quiz:', error);
     } finally {
@@ -83,6 +93,8 @@ export const TakeQuiz = () => {
         quizId,
         answers: formattedAnswers,
         isAutoSubmitted,
+        studentName: JSON.parse(sessionStorage.getItem(`quiz_student_details_${quizId}`) || 'null')?.name,
+        studentPrn: JSON.parse(sessionStorage.getItem(`quiz_student_details_${quizId}`) || 'null')?.prn,
       });
 
       if (socket) {

@@ -36,6 +36,12 @@ const quizAttemptSchema = new mongoose.Schema({
   studentName: {
     type: String,
     required: true,
+    trim: true,
+  },
+  studentPrn: {
+    type: String,
+    required: true,
+    trim: true,
   },
   answers: [answerSchema],
   score: {

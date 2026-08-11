@@ -4,7 +4,7 @@ import API from '../../api/axios';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import { LeaderboardTable } from '../../components/LeaderboardTable';
-import { Play, Radio, Users, Copy, Check, ArrowLeft, Square, Sparkles, CheckCircle2, Link2 } from 'lucide-react';
+import { Play, Radio, Users, Copy, Check, ArrowLeft, Square, Sparkles, CheckCircle2, Link2, Trophy, ListOrdered } from 'lucide-react';
 
 export const LiveMonitor = () => {
   const { id: quizId } = useParams();
@@ -20,6 +20,7 @@ export const LiveMonitor = () => {
   const [submissionCount, setSubmissionCount] = useState(0);
   const [leaderboard, setLeaderboard] = useState([]);
   const [status, setStatus] = useState('draft');
+  const [releasing, setReleasing] = useState(null);
 
   useEffect(() => {
     fetchQuizAndAttempts();
@@ -64,18 +65,18 @@ export const LiveMonitor = () => {
     });
 
     // Listen for real-time student submissions
-    socket.on('student_submitted_update', ({ submittedCount, leaderboard: newLeaderboard }) => {
+    socket.on('student_submitted_update', ({ submittedCount }) => {
       setSubmissionCount(submittedCount);
-      if (newLeaderboard) setLeaderboard(newLeaderboard);
+      fetchQuizAndAttempts();
     });
 
     socket.on('quiz_started', ({ status: newStatus }) => {
       setStatus(newStatus || 'live');
     });
 
-    socket.on('quiz_ended', ({ leaderboard: finalLeaderboard }) => {
+    socket.on('quiz_ended', () => {
       setStatus('ended');
-      if (finalLeaderboard) setLeaderboard(finalLeaderboard);
+      fetchQuizAndAttempts();
     });
 
     return () => {
@@ -125,6 +126,20 @@ export const LiveMonitor = () => {
     if (!window.confirm('Are you sure you want to end this live quiz for all students?')) return;
     socket.emit('end_quiz', { quizId });
     setStatus('ended');
+  };
+
+  const handleRelease = async (type) => {
+    setReleasing(type);
+    try {
+      const endpoint = type === 'results' ? 'release-results' : 'release-leaderboard';
+      const response = await API.patch(`/quizzes/${quizId}/${endpoint}`);
+      setQuiz(response.data);
+      socket?.emit(type === 'results' ? 'results_released' : 'leaderboard_released', { quizId });
+    } catch (error) {
+      window.alert(error.response?.data?.message || `Unable to release ${type}.`);
+    } finally {
+      setReleasing(null);
+    }
   };
 
   if (loading || !quiz) {
@@ -250,9 +265,21 @@ export const LiveMonitor = () => {
             )}
 
             {status === 'ended' && (
-              <div className="text-right py-2">
-                <span className="text-xs font-bold text-slate-400 block">Quiz session completed</span>
-                <span className="text-sm font-semibold text-indigo-400">Final results displayed below</span>
+              <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  onClick={() => handleRelease('results')}
+                  disabled={quiz.resultsReleased || releasing !== null}
+                  className="py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-400 text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-all"
+                >
+                  <Trophy className="w-4 h-4" /> {quiz.resultsReleased ? 'Results Released' : releasing === 'results' ? 'Releasing...' : 'Show Results'}
+                </button>
+                <button
+                  onClick={() => handleRelease('leaderboard')}
+                  disabled={quiz.leaderboardReleased || releasing !== null}
+                  className="py-3 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 disabled:text-slate-400 text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-all"
+                >
+                  <ListOrdered className="w-4 h-4" /> {quiz.leaderboardReleased ? 'Leaderboard Released' : releasing === 'leaderboard' ? 'Releasing...' : 'Show Leaderboard'}
+                </button>
               </div>
             )}
           </div>

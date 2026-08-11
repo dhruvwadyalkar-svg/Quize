@@ -3,8 +3,17 @@ import { QuizAttempt } from '../models/QuizAttempt.js';
 
 export const startAttempt = async (req, res) => {
   try {
-    const { quizId } = req.body;
+    const { quizId, studentName, studentPrn } = req.body;
     const studentId = req.user._id;
+
+    const name = typeof studentName === 'string' ? studentName.trim() : '';
+    const prn = typeof studentPrn === 'string' ? studentPrn.trim() : '';
+    if (!name || !prn) {
+      return res.status(400).json({ message: 'Your name and PRN are required before starting the quiz.' });
+    }
+    if (name.length > 100 || prn.length > 50) {
+      return res.status(400).json({ message: 'Name or PRN is too long.' });
+    }
 
     const quiz = await Quiz.findById(quizId);
     if (!quiz) {
@@ -16,11 +25,17 @@ export const startAttempt = async (req, res) => {
       attempt = await QuizAttempt.create({
         quizId,
         studentId,
-        studentName: req.user.name || 'Student',
+        studentName: name,
+        studentPrn: prn,
         startedAt: new Date(),
         totalPossibleMarks: quiz.totalMarks || 0,
         status: 'in-progress',
       });
+    } else if (attempt.status === 'in-progress') {
+      // Keep the identity submitted on the join screen current if the student re-enters the quiz.
+      attempt.studentName = name;
+      attempt.studentPrn = prn;
+      await attempt.save();
     }
 
     res.json(attempt);
@@ -32,7 +47,7 @@ export const startAttempt = async (req, res) => {
 
 export const submitAttempt = async (req, res) => {
   try {
-    const { quizId, answers, isAutoSubmitted } = req.body; // answers: [{ questionId, selectedOptions, timeTakenSec }]
+    const { quizId, answers, isAutoSubmitted, studentName, studentPrn } = req.body; // answers: [{ questionId, selectedOptions, timeTakenSec }]
     const studentId = req.user._id;
 
     const quiz = await Quiz.findById(quizId);
@@ -42,10 +57,16 @@ export const submitAttempt = async (req, res) => {
 
     let attempt = await QuizAttempt.findOne({ quizId, studentId });
     if (!attempt) {
+      const name = typeof studentName === 'string' ? studentName.trim() : '';
+      const prn = typeof studentPrn === 'string' ? studentPrn.trim() : '';
+      if (!name || !prn) {
+        return res.status(400).json({ message: 'Your name and PRN are required before submitting the quiz.' });
+      }
       attempt = new QuizAttempt({
         quizId,
         studentId,
-        studentName: req.user.name || 'Student',
+        studentName: name,
+        studentPrn: prn,
         startedAt: new Date(),
       });
     }
@@ -109,7 +130,13 @@ export const submitAttempt = async (req, res) => {
 export const getQuizAttempts = async (req, res) => {
   try {
     const { quizId } = req.params;
-    // Fetch attempts that are submitted or auto-submitted
+    if (req.user.role === 'student') {
+      const quiz = await Quiz.findById(quizId).select('leaderboardReleased');
+      if (!quiz) return res.status(404).json({ message: 'Quiz not found.' });
+      if (!quiz.leaderboardReleased) {
+        return res.status(403).json({ message: 'The leaderboard has not been released by the admin yet.' });
+      }
+    }
     const attempts = await QuizAttempt.find({ quizId }).sort({ score: -1, totalTimeTakenSec: 1 });
     res.json(attempts);
   } catch (error) {
@@ -121,6 +148,11 @@ export const getQuizAttempts = async (req, res) => {
 export const getStudentAttempt = async (req, res) => {
   try {
     const { quizId } = req.params;
+    const quiz = await Quiz.findById(quizId).select('resultsReleased');
+    if (!quiz) return res.status(404).json({ message: 'Quiz not found.' });
+    if (!quiz.resultsReleased) {
+      return res.status(403).json({ message: 'Your result has not been released by the admin yet.' });
+    }
     const attempt = await QuizAttempt.findOne({ quizId, studentId: req.user._id });
     if (!attempt) {
       return res.status(404).json({ message: 'No attempt found.' });
