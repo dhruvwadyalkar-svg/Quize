@@ -3,7 +3,7 @@ import { normalizeAndValidateQuestions, parseGeminiJson } from '../utils/questio
 const callGroq = async (prompt, timeoutMs = 90000) => {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    throw new Error('Groq API key is not configured. Set GROQ_API_KEY in backend .env.');
+    throw new Error('Groq API key is not configured. Set GROQ_API_KEY in backend .env or server environment variables.');
   }
 
   const modelName = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
